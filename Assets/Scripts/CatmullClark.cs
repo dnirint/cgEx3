@@ -60,9 +60,6 @@ public static class CatmullClark
             {
 
                 int a = (int) meshData.faces[i][j];
-                Debug.Log((j + 1) % 4);
-                Debug.Log((j + 3) % 4);
-                Debug.Log("---");
 
                 int a_next = (int) meshData.faces[i][(j + 1) % 4];
                 int a_prev = (int) meshData.faces[i][(j + 3) % 4];
@@ -102,6 +99,11 @@ public static class CatmullClark
                             d_index = edgePointIndices[d];
                         }
                     }
+                    
+                }
+                if (d_index< 0 || b_index < 0)
+                {
+                    throw new Exception("Unexpected result");
                 }
                 Vector4 newFace = new Vector4(a, b_index, c_index, d_index);
                 newQuads.Add(newFace);
@@ -141,10 +143,10 @@ public static class CatmullClark
                 
                 if (intersection.Count() == 2)
                 {
-                    float a = intersection[0];
-                    float b = intersection[1];
-                    sharedEdges.Add(new Vector2(Math.Min(a, b), Math.Max(a, b)));
-                    Vector4 edgeVector = new Vector4(intersection[0], intersection[1], Math.Max(i, j), Math.Min(i, j));
+                    float a = Math.Min(intersection[0], intersection[1]);
+                    float b = Math.Max(intersection[0], intersection[1]);
+                    sharedEdges.Add(new Vector2(a, b));
+                    Vector4 edgeVector = new Vector4(a, b, Math.Max(i, j), Math.Min(i, j));
                     outList.Add(edgeVector);
                 }
             }
@@ -241,6 +243,12 @@ public static class CatmullClark
 
             newPointsData[p1].edges.Add(i);
             newPointsData[p2].edges.Add(i);
+            int k = 10;
+            if (p1 == k || p2 == k)
+            {
+                Debug.Log($"vertex {k} participated in edge {i}");
+            }
+
         }
 
         foreach (NewPointData newPointData in newPointsData)
@@ -250,18 +258,24 @@ public static class CatmullClark
             {
                 f += mesh.facePoints[faceIndex];
             }
-            f /= newPointData.faces.Count();
+            f /= (float)newPointData.faces.Count();
 
             Vector3 r = Vector3.zero;
             foreach(int edgeIndex in newPointData.edges)
             {
                 Vector4 edge = mesh.edges[edgeIndex]; //Vector4(p1, p2, f1, f2)
-                r += mesh.points[(int) edge[0]] + mesh.points[(int) edge[1]];
+                var p1 = mesh.points[(int)edge[0]];
+                var p2 = mesh.points[(int)edge[1]];
+                r += (p1 + p2) / (float)2;
             }
             int n = newPointData.edges.Count();
-            r /= 2 * n;
-
-            Vector3 newPointLocation = (f + (2 * r) + ((n - 3) * newPointData.coordinates)) / n;
+            //if (n != 3)
+            //{
+            //    Debug.Log($"n={n}");
+            //}
+            r /= n;
+            Vector3 p = newPointData.coordinates;
+            Vector3 newPointLocation = (f + (2 * r) + ((n - 3) * p)) / (float)n;
             outList.Add(newPointLocation);
         }
 
